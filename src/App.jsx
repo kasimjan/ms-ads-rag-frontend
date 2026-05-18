@@ -11,11 +11,21 @@ const STARTERS = [
 
 const K_OPTIONS = [3, 5, 8];
 
-// Pull just the filename out of a Windows or POSIX path
-function basename(p) {
-  if (!p) return "source";
-  const parts = String(p).split(/[\\/]/);
-  return parts[parts.length - 1] || p;
+// Return a clean URL from backend source object.
+// Expected backend shape:
+// { url: "https://...", chunk_id: 1, preview: "..." }
+function sourceUrl(source) {
+  return source?.url || source?.source_url || "";
+}
+
+function shortUrl(url) {
+  if (!url) return "Unknown source";
+  try {
+    const u = new URL(url);
+    return u.hostname + u.pathname.replace(/\/$/, "");
+  } catch {
+    return url;
+  }
 }
 
 function App() {
@@ -245,6 +255,7 @@ function ThinkingRow() {
 
 function SourcesPanel({ sources }) {
   const [open, setOpen] = useState(false);
+
   return (
     <div className={"sources " + (open ? "sources-open" : "")}>
       <button className="sources-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
@@ -252,18 +263,42 @@ function SourcesPanel({ sources }) {
         <span className="sources-label">Sources</span>
         <span className="sources-count">{sources.length}</span>
       </button>
+
       {open && (
         <ol className="sources-list">
-          {sources.map((s, i) => (
-            <li key={i} className="source-card">
-              <div className="source-head">
-                <span className="source-num">{String(i + 1).padStart(2, "0")}</span>
-                <span className="source-file" title={s.source}>{basename(s.source)}</span>
-                <span className="source-chunk">chunk #{s.chunk_id}</span>
-              </div>
-              <div className="source-preview">{s.preview}</div>
-            </li>
-          ))}
+          {sources.map((s, i) => {
+            const url = sourceUrl(s);
+
+            return (
+              <li key={i} className="source-card">
+                <div className="source-head">
+                  <span className="source-num">{String(i + 1).padStart(2, "0")}</span>
+
+                  {url ? (
+                    <a
+                      className="source-link"
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={url}
+                    >
+                      {shortUrl(url)}
+                    </a>
+                  ) : (
+                    <span className="source-link source-link-missing">
+                      Unknown source
+                    </span>
+                  )}
+
+                  <span className="source-chunk">chunk #{s.chunk_id}</span>
+                </div>
+
+                {s.preview && (
+                  <div className="source-preview">{s.preview}</div>
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
     </div>
